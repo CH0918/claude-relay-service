@@ -12,6 +12,7 @@ const claudeCodeHeadersService = require('../services/claudeCodeHeadersService')
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const config = require('../../config/config');
 
 const router = express.Router();
 
@@ -291,6 +292,21 @@ router.get('/api-keys', authenticateAdmin, async (req, res) => {
   }
 });
 
+// 获取支持的客户端列表
+router.get('/supported-clients', authenticateAdmin, async (req, res) => {
+  try {
+    const clients = config.clientRestrictions.predefinedClients.map(client => ({
+      id: client.id,
+      name: client.name,
+      description: client.description
+    }));
+    res.json({ success: true, data: clients });
+  } catch (error) {
+    logger.error('❌ Failed to get supported clients:', error);
+    res.status(500).json({ error: 'Failed to get supported clients', message: error.message });
+  }
+});
+
 // 创建新的API Key
 router.post('/api-keys', authenticateAdmin, async (req, res) => {
   try {
@@ -306,7 +322,9 @@ router.post('/api-keys', authenticateAdmin, async (req, res) => {
       rateLimitWindow,
       rateLimitRequests,
       enableModelRestriction,
-      restrictedModels
+      restrictedModels,
+      enableClientRestriction,
+      allowedClients
     } = req.body;
 
     // 输入验证
@@ -348,6 +366,15 @@ router.post('/api-keys', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Restricted models must be an array' });
     }
 
+    // 验证客户端限制字段
+    if (enableClientRestriction !== undefined && typeof enableClientRestriction !== 'boolean') {
+      return res.status(400).json({ error: 'Enable client restriction must be a boolean' });
+    }
+
+    if (allowedClients !== undefined && !Array.isArray(allowedClients)) {
+      return res.status(400).json({ error: 'Allowed clients must be an array' });
+    }
+
     const newKey = await apiKeyService.generateApiKey({
       name,
       description,
@@ -360,7 +387,9 @@ router.post('/api-keys', authenticateAdmin, async (req, res) => {
       rateLimitWindow,
       rateLimitRequests,
       enableModelRestriction,
-      restrictedModels
+      restrictedModels,
+      enableClientRestriction,
+      allowedClients
     });
 
     logger.success(`🔑 Admin created new API key: ${name}`);
@@ -375,7 +404,7 @@ router.post('/api-keys', authenticateAdmin, async (req, res) => {
 router.put('/api-keys/:keyId', authenticateAdmin, async (req, res) => {
   try {
     const { keyId } = req.params;
-    const { tokenLimit, concurrencyLimit, rateLimitWindow, rateLimitRequests, claudeAccountId, geminiAccountId, permissions, enableModelRestriction, restrictedModels, expiresAt } = req.body;
+    const { tokenLimit, concurrencyLimit, rateLimitWindow, rateLimitRequests, claudeAccountId, geminiAccountId, permissions, enableModelRestriction, restrictedModels, enableClientRestriction, allowedClients, expiresAt } = req.body;
 
     // 只允许更新指定字段
     const updates = {};
@@ -439,6 +468,21 @@ router.put('/api-keys/:keyId', authenticateAdmin, async (req, res) => {
         return res.status(400).json({ error: 'Restricted models must be an array' });
       }
       updates.restrictedModels = restrictedModels;
+    }
+
+    // 处理客户端限制字段
+    if (enableClientRestriction !== undefined) {
+      if (typeof enableClientRestriction !== 'boolean') {
+        return res.status(400).json({ error: 'Enable client restriction must be a boolean' });
+      }
+      updates.enableClientRestriction = enableClientRestriction;
+    }
+
+    if (allowedClients !== undefined) {
+      if (!Array.isArray(allowedClients)) {
+        return res.status(400).json({ error: 'Allowed clients must be an array' });
+      }
+      updates.allowedClients = allowedClients;
     }
 
     // 处理过期时间字段
@@ -586,7 +630,34 @@ router.post('/claude-accounts/exchange-code', authenticateAdmin, async (req, res
 router.get('/claude-accounts', authenticateAdmin, async (req, res) => {
   try {
     const accounts = await claudeAccountService.getAllAccounts();
-    res.json({ success: true, data: accounts });
+    
+    // 为每个账户添加使用统计信息
+    const accountsWithStats = await Promise.all(accounts.map(async (account) => {
+      try {
+        const usageStats = await redis.getAccountUsageStats(account.id);
+        return {
+          ...account,
+          usage: {
+            daily: usageStats.daily,
+            total: usageStats.total,
+            averages: usageStats.averages
+          }
+        };
+      } catch (statsError) {
+        logger.warn(`⚠️ Failed to get usage stats for account ${account.id}:`, statsError.message);
+        // 如果获取统计失败，返回空统计
+        return {
+          ...account,
+          usage: {
+            daily: { tokens: 0, requests: 0, allTokens: 0 },
+            total: { tokens: 0, requests: 0, allTokens: 0 },
+            averages: { rpm: 0, tpm: 0 }
+          }
+        };
+      }
+    }));
+    
+    res.json({ success: true, data: accountsWithStats });
   } catch (error) {
     logger.error('❌ Failed to get Claude accounts:', error);
     res.status(500).json({ error: 'Failed to get Claude accounts', message: error.message });
@@ -773,7 +844,18 @@ router.post('/gemini-accounts/exchange-code', authenticateAdmin, async (req, res
 router.get('/gemini-accounts', authenticateAdmin, async (req, res) => {
   try {
     const accounts = await geminiAccountService.getAllAccounts();
-    res.json({ success: true, data: accounts });
+    
+    // 为Gemini账户添加空的使用统计（暂时）
+    const accountsWithStats = accounts.map(account => ({
+      ...account,
+      usage: {
+        daily: { tokens: 0, requests: 0, allTokens: 0 },
+        total: { tokens: 0, requests: 0, allTokens: 0 },
+        averages: { rpm: 0, tpm: 0 }
+      }
+    }));
+    
+    res.json({ success: true, data: accountsWithStats });
   } catch (error) {
     logger.error('❌ Failed to get Gemini accounts:', error);
     res.status(500).json({ error: 'Failed to get accounts', message: error.message });
@@ -843,6 +925,73 @@ router.post('/gemini-accounts/:accountId/refresh', authenticateAdmin, async (req
   } catch (error) {
     logger.error('❌ Failed to refresh Gemini account token:', error);
     res.status(500).json({ error: 'Failed to refresh token', message: error.message });
+  }
+});
+
+// 📊 账户使用统计
+
+// 获取所有账户的使用统计
+router.get('/accounts/usage-stats', authenticateAdmin, async (req, res) => {
+  try {
+    const accountsStats = await redis.getAllAccountsUsageStats();
+    
+    res.json({
+      success: true,
+      data: accountsStats,
+      summary: {
+        totalAccounts: accountsStats.length,
+        activeToday: accountsStats.filter(account => account.daily.requests > 0).length,
+        totalDailyTokens: accountsStats.reduce((sum, account) => sum + (account.daily.allTokens || 0), 0),
+        totalDailyRequests: accountsStats.reduce((sum, account) => sum + (account.daily.requests || 0), 0)
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('❌ Failed to get accounts usage stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get accounts usage stats',
+      message: error.message
+    });
+  }
+});
+
+// 获取单个账户的使用统计
+router.get('/accounts/:accountId/usage-stats', authenticateAdmin, async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    const accountStats = await redis.getAccountUsageStats(accountId);
+    
+    // 获取账户基本信息
+    const accountData = await claudeAccountService.getAccount(accountId);
+    if (!accountData) {
+      return res.status(404).json({
+        success: false,
+        error: 'Account not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        ...accountStats,
+        accountInfo: {
+          name: accountData.name,
+          email: accountData.email,
+          status: accountData.status,
+          isActive: accountData.isActive,
+          createdAt: accountData.createdAt
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('❌ Failed to get account usage stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get account usage stats',
+      message: error.message
+    });
   }
 });
 

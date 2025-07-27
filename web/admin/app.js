@@ -174,6 +174,8 @@ const app = createApp({
                     })()
                 }
             ],
+						apiKeysSortBy: '', // 当前排序字段
+            apiKeysSortOrder: 'asc', // 排序顺序 'asc' 或 'desc'
             showCreateApiKeyModal: false,
             createApiKeyLoading: false,
             apiKeyForm: {
@@ -189,6 +191,8 @@ const app = createApp({
                 enableModelRestriction: false,
                 restrictedModels: [],
                 modelInput: '',
+                enableClientRestriction: false,
+                allowedClients: [],
                 expireDuration: '', // 过期时长选择
                 customExpireDate: '', // 自定义过期日期
                 expiresAt: null // 实际的过期时间戳
@@ -248,12 +252,19 @@ const app = createApp({
                 permissions: 'all',
                 enableModelRestriction: false,
                 restrictedModels: [],
-                modelInput: ''
+                modelInput: '',
+                enableClientRestriction: false,
+                allowedClients: []
             },
+            
+            // 支持的客户端列表
+            supportedClients: [],
             
             // 账户
             accounts: [],
             accountsLoading: false,
+            accountSortBy: 'dailyTokens', // 默认按今日Token排序
+            accountsSortOrder: 'asc', // 排序顺序 'asc' 或 'desc'
             showCreateAccountModal: false,
             createAccountLoading: false,
             accountForm: {
@@ -357,6 +368,83 @@ const app = createApp({
             return `${window.location.protocol}//${window.location.host}/api/`;
         },
         
+        // 排序后的账户列表
+        sortedAccounts() {
+            if (!this.accountsSortBy) {
+                return this.accounts;
+            }
+            
+            return [...this.accounts].sort((a, b) => {
+                let aValue = a[this.accountsSortBy];
+                let bValue = b[this.accountsSortBy];
+                
+                // 特殊处理状态字段
+                if (this.accountsSortBy === 'status') {
+                    aValue = a.isActive ? 1 : 0;
+                    bValue = b.isActive ? 1 : 0;
+                }
+                
+                // 处理字符串比较
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    aValue = aValue.toLowerCase();
+                    bValue = bValue.toLowerCase();
+                }
+                
+                // 排序
+                if (this.accountsSortOrder === 'asc') {
+                    return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+                } else {
+                    return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+                }
+            });
+        },
+        
+        // 排序后的API Keys列表
+        sortedApiKeys() {
+            if (!this.apiKeysSortBy) {
+                return this.apiKeys;
+            }
+            
+            return [...this.apiKeys].sort((a, b) => {
+                let aValue, bValue;
+                
+                // 特殊处理不同字段
+                switch (this.apiKeysSortBy) {
+                    case 'status':
+                        aValue = a.isActive ? 1 : 0;
+                        bValue = b.isActive ? 1 : 0;
+                        break;
+                    case 'cost':
+                        // 计算费用，转换为数字比较
+                        aValue = this.calculateApiKeyCostNumber(a.usage);
+                        bValue = this.calculateApiKeyCostNumber(b.usage);
+                        break;
+                    case 'createdAt':
+                    case 'expiresAt':
+                        // 日期比较
+                        aValue = a[this.apiKeysSortBy] ? new Date(a[this.apiKeysSortBy]).getTime() : 0;
+                        bValue = b[this.apiKeysSortBy] ? new Date(b[this.apiKeysSortBy]).getTime() : 0;
+                        break;
+                    default:
+                        aValue = a[this.apiKeysSortBy];
+                        bValue = b[this.apiKeysSortBy];
+                        
+                        // 处理字符串比较
+                        if (typeof aValue === 'string' && typeof bValue === 'string') {
+                            aValue = aValue.toLowerCase();
+                            bValue = bValue.toLowerCase();
+                        }
+                }
+                
+                // 排序
+                if (this.apiKeysSortOrder === 'asc') {
+                    return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+                } else {
+                    return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+                }
+            });
+        },
+        
         // 获取专属账号列表
         dedicatedAccounts() {
             return this.accounts.filter(account => 
@@ -408,10 +496,11 @@ const app = createApp({
             // 初始化日期筛选器和图表数据
             this.initializeDateFilter();
             
-            // 预加载账号列表和API Keys，以便正确显示绑定关系
+            // 预加载账号列表、API Keys和支持的客户端，以便正确显示绑定关系
             Promise.all([
                 this.loadAccounts(),
-                this.loadApiKeys()
+                this.loadApiKeys(),
+                this.loadSupportedClients()
             ]).then(() => {
                 // 根据当前活跃标签页加载数据
                 this.loadCurrentTabData();
@@ -461,6 +550,30 @@ const app = createApp({
     },
     
     methods: {
+        // 账户列表排序
+        sortAccounts(field) {
+            if (this.accountsSortBy === field) {
+                // 如果点击的是当前排序字段，切换排序顺序
+                this.accountsSortOrder = this.accountsSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                // 如果点击的是新字段，设置为升序
+                this.accountsSortBy = field;
+                this.accountsSortOrder = 'asc';
+            }
+        },
+        
+        // API Keys列表排序
+        sortApiKeys(field) {
+            if (this.apiKeysSortBy === field) {
+                // 如果点击的是当前排序字段，切换排序顺序
+                this.apiKeysSortOrder = this.apiKeysSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                // 如果点击的是新字段，设置为升序
+                this.apiKeysSortBy = field;
+                this.apiKeysSortOrder = 'asc';
+            }
+        },
+        
         // 从URL读取tab参数并设置activeTab
         initializeTabFromUrl() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1875,6 +1988,18 @@ const app = createApp({
             }
         },
         
+        async loadSupportedClients() {
+            try {
+                const data = await this.apiRequest('/admin/supported-clients');
+                if (data && data.success) {
+                    this.supportedClients = data.data || [];
+                    console.log('Loaded supported clients:', this.supportedClients);
+                }
+            } catch (error) {
+                console.error('Failed to load supported clients:', error);
+            }
+        },
+        
         async loadApiKeys() {
             this.apiKeysLoading = true;
             console.log('Loading API Keys with time range:', this.apiKeyStatsTimeRange);
@@ -1973,6 +2098,9 @@ const app = createApp({
                         account.boundApiKeysCount = this.apiKeys.filter(key => key.geminiAccountId === account.id).length;
                     }
                 });
+                
+                // 加载完成后自动排序
+                this.sortAccounts();
             } catch (error) {
                 console.error('Failed to load accounts:', error);
             } finally {
@@ -2039,7 +2167,36 @@ const app = createApp({
                 default:
                     return '全部时间';
             }
-        },
+					},
+        // 账户排序
+        // sortAccounts() {
+        //     if (!this.accounts || this.accounts.length === 0) return;
+            
+        //     this.accounts.sort((a, b) => {
+        //         switch (this.accountSortBy) {
+        //             case 'name':
+        //                 return a.name.localeCompare(b.name);
+        //             case 'dailyTokens':
+        //                 const aTokens = (a.usage && a.usage.daily && a.usage.daily.allTokens) || 0;
+        //                 const bTokens = (b.usage && b.usage.daily && b.usage.daily.allTokens) || 0;
+        //                 return bTokens - aTokens; // 降序
+        //             case 'dailyRequests':
+        //                 const aRequests = (a.usage && a.usage.daily && a.usage.daily.requests) || 0;
+        //                 const bRequests = (b.usage && b.usage.daily && b.usage.daily.requests) || 0;
+        //                 return bRequests - aRequests; // 降序
+        //             case 'totalTokens':
+        //                 const aTotalTokens = (a.usage && a.usage.total && a.usage.total.allTokens) || 0;
+        //                 const bTotalTokens = (b.usage && b.usage.total && b.usage.total.allTokens) || 0;
+        //                 return bTotalTokens - aTotalTokens; // 降序
+        //             case 'lastUsed':
+        //                 const aLastUsed = a.lastUsedAt ? new Date(a.lastUsedAt) : new Date(0);
+        //                 const bLastUsed = b.lastUsedAt ? new Date(b.lastUsedAt) : new Date(0);
+        //                 return bLastUsed - aLastUsed; // 降序（最近使用的在前）
+        //             default:
+        //                 return 0;
+        //         }
+        //     });
+        // },
         
         async loadModelStats() {
             this.modelStatsLoading = true;
@@ -2081,6 +2238,8 @@ const app = createApp({
                         permissions: this.apiKeyForm.permissions || 'all',
                         enableModelRestriction: this.apiKeyForm.enableModelRestriction,
                         restrictedModels: this.apiKeyForm.restrictedModels,
+                        enableClientRestriction: this.apiKeyForm.enableClientRestriction,
+                        allowedClients: this.apiKeyForm.allowedClients,
                         expiresAt: this.apiKeyForm.expiresAt
                     })
                 });
@@ -2115,6 +2274,8 @@ const app = createApp({
                         enableModelRestriction: false, 
                         restrictedModels: [], 
                         modelInput: '',
+                        enableClientRestriction: false,
+                        allowedClients: [],
                         expireDuration: '',
                         customExpireDate: '',
                         expiresAt: null
@@ -2282,7 +2443,9 @@ const app = createApp({
                 permissions: key.permissions || 'all',
                 enableModelRestriction: key.enableModelRestriction || false,
                 restrictedModels: key.restrictedModels ? [...key.restrictedModels] : [],
-                modelInput: ''
+                modelInput: '',
+                enableClientRestriction: key.enableClientRestriction || false,
+                allowedClients: key.allowedClients ? [...key.allowedClients] : []
             };
             this.showEditApiKeyModal = true;
         },
@@ -2301,7 +2464,9 @@ const app = createApp({
                 permissions: 'all',
                 enableModelRestriction: false,
                 restrictedModels: [],
-                modelInput: ''
+                modelInput: '',
+                enableClientRestriction: false,
+                allowedClients: []
             };
         },
 
@@ -2319,7 +2484,9 @@ const app = createApp({
                         geminiAccountId: this.editApiKeyForm.geminiAccountId || null,
                         permissions: this.editApiKeyForm.permissions || 'all',
                         enableModelRestriction: this.editApiKeyForm.enableModelRestriction,
-                        restrictedModels: this.editApiKeyForm.restrictedModels
+                        restrictedModels: this.editApiKeyForm.restrictedModels,
+                        enableClientRestriction: this.editApiKeyForm.enableClientRestriction,
+                        allowedClients: this.editApiKeyForm.allowedClients
                     })
                 });
                 
@@ -3351,6 +3518,19 @@ const app = createApp({
             
             // 如果没有后端费用数据，返回默认值
             return '$0.000000';
+        },
+        
+        // 计算API Key费用数值（用于排序）
+        calculateApiKeyCostNumber(usage) {
+            if (!usage || !usage.total) return 0;
+            
+            // 使用后端返回的准确费用数据
+            if (usage.total.cost) {
+                return usage.total.cost;
+            }
+            
+            // 如果没有后端费用数据，返回0
+            return 0;
         },
 
         // 初始化日期筛选器
