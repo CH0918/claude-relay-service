@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Relay Service - 管理后台</title>
-    
+    <link rel="icon" type="image/png" href="data:image/png;base64,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">
+
     <!-- 预连接到CDN域名，加速资源加载 -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -473,6 +474,124 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 费用总计统计 -->
+                        <div class="mt-6">
+                            <div class="bg-gradient-to-r from-green-50 via-blue-50 to-purple-50 rounded-xl p-6 border border-gray-200 shadow-sm">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-lg font-semibold text-gray-800 flex items-center">
+                                        <i class="fas fa-calculator text-green-600 mr-3"></i>
+                                        费用总计统计
+                                    </h4>
+                                    <div class="text-sm text-gray-500">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ getCurrentRangeDisplayText() }}
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <!-- 总费用 -->
+                                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-600 mb-1">总费用</div>
+                                                <div class="text-2xl font-bold text-green-600">
+                                                    {{ costsData.totalCosts.formatted.totalCost || '$0.000000' }}
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    总计：{{ formatNumber((costsData.totalCosts.inputTokens || 0) + (costsData.totalCosts.outputTokens || 0) + (costsData.totalCosts.cacheCreateTokens || 0) + (costsData.totalCosts.cacheReadTokens || 0)) }} Tokens
+                                                </div>
+                                            </div>
+                                            <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-dollar-sign text-white text-lg"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 输入费用 -->
+                                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-600 mb-1">输入费用</div>
+                                                <div class="text-2xl font-bold text-blue-600">
+                                                    {{ costsData.totalCosts.formatted.inputCost || '$0.000000' }}
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    {{ formatNumber(costsData.totalCosts.inputTokens || 0) }} Tokens
+                                                </div>
+                                            </div>
+                                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-arrow-down text-white text-lg"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 输出费用 -->
+                                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-600 mb-1">输出费用</div>
+                                                <div class="text-2xl font-bold text-orange-600">
+                                                    {{ costsData.totalCosts.formatted.outputCost || '$0.000000' }}
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    {{ formatNumber(costsData.totalCosts.outputTokens || 0) }} Tokens
+                                                </div>
+                                            </div>
+                                            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-arrow-up text-white text-lg"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 缓存费用 -->
+                                    <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-600 mb-1">缓存费用</div>
+                                                <div class="text-2xl font-bold text-purple-600">
+                                                    {{ costsData.totalCosts.formatted.cacheCost || '$0.000000' }}
+                                                </div>
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    创建: {{ formatNumber(costsData.totalCosts.cacheCreateTokens || 0) }} / 读取: {{ formatNumber(costsData.totalCosts.cacheReadTokens || 0) }}
+                                                </div>
+                                            </div>
+                                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-database text-white text-lg"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 今日费用对比 -->
+                                <div class="mt-6 p-4 bg-white rounded-lg border border-gray-100">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-calendar-day text-indigo-600 mr-2"></i>
+                                            <span class="text-sm font-semibold text-gray-700">今日费用对比</span>
+                                        </div>
+                                        <div class="flex items-center gap-6 text-sm">
+                                            <div class="text-center">
+                                                <div class="text-gray-600">今日总费用</div>
+                                                <div class="text-lg font-bold text-green-600">{{ costsData.todayCosts.formatted.totalCost || '$0.000000' }}</div>
+                                            </div>
+                                            <div class="w-px h-8 bg-gray-200"></div>
+                                            <div class="text-center">
+                                                <div class="text-gray-600">历史总费用</div>
+                                                <div class="text-lg font-bold text-blue-600">{{ costsData.totalCosts.formatted.totalCost || '$0.000000' }}</div>
+                                            </div>
+                                            <div class="w-px h-8 bg-gray-200"></div>
+                                            <div class="text-center">
+                                                <div class="text-gray-600">今日占比</div>
+                                                <div class="text-lg font-bold text-purple-600">
+                                                    {{ calculateTodayPercentage() }}%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Token使用趋势图 -->
@@ -537,18 +656,44 @@
                             <div>
                                 <h3 class="text-xl font-bold text-gray-900 mb-2">API Keys 管理</h3>
                                 <p class="text-gray-600">管理和监控您的 API 密钥</p>
+                                <div class="mt-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        当前显示：{{ getCurrentRangeDisplayText() }}
+                                    </span>
+                                </div>
                             </div>
                             <div class="flex items-center gap-3">
                                 <!-- Token统计时间范围选择 -->
-                                <select 
-                                    v-model="apiKeyStatsTimeRange" 
-                                    @change="loadApiKeys()"
-                                    class="form-select px-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    <option value="all">全部时间</option>
-                                    <option value="7days">最近7天</option>
-                                    <option value="monthly">本月</option>
-                                </select>
+                                <div class="flex items-center gap-2">
+                                    <select 
+                                        v-model="apiKeyStatsTimeRange" 
+                                        @change="onApiKeyTimeRangeChange()"
+                                        class="form-select px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    >
+                                        <option value="all">全部时间</option>
+                                        <option value="7days">最近7天</option>
+                                        <option value="monthly">本月</option>
+                                        <option value="custom">自定义时间范围</option>
+                                    </select>
+                                    
+                                    <!-- 自定义时间范围选择器 -->
+                                    <div v-if="apiKeyStatsTimeRange === 'custom'" class="flex items-center gap-2">
+                                        <el-date-picker
+                                            v-model="apiKeyCustomDateRange"
+                                            type="daterange"
+                                            range-separator="至"
+                                            start-placeholder="开始日期"
+                                            end-placeholder="结束日期"
+                                            size="small"
+                                            format="YYYY-MM-DD"
+                                            value-format="YYYY-MM-DD"
+                                            :shortcuts="apiKeyDateShortcuts"
+                                            @change="onApiKeyCustomDateChange"
+                                            style="width: 260px;"
+                                        />
+                                    </div>
+                                </div>
                                 <button 
                                     @click.stop="openCreateApiKeyModal"
                                     class="btn btn-primary px-6 py-3 flex items-center gap-2"
@@ -627,17 +772,17 @@
                                                     <!-- 请求统计 -->
                                                     <div class="flex justify-between text-sm">
                                                         <span class="text-gray-600">请求数:</span>
-                                                        <span class="font-medium text-gray-900">{{ formatNumber((key.usage && key.usage.total && key.usage.total.requests) || 0) }}</span>
+                                                        <span class="font-medium text-gray-900">{{ formatNumber(getCurrentRangeUsage(key).requests) }}</span>
                                                     </div>
                                                     <!-- Token统计 -->
                                                     <div class="flex justify-between text-sm">
                                                         <span class="text-gray-600">Token:</span>
-                                                        <span class="font-medium text-gray-900">{{ formatNumber((key.usage && key.usage.total && key.usage.total.tokens) || 0) }}</span>
+                                                        <span class="font-medium text-gray-900">{{ formatNumber(getCurrentRangeUsage(key).allTokens || getCurrentRangeUsage(key).tokens) }}</span>
                                                     </div>
                                                     <!-- 费用统计 -->
                                                     <div class="flex justify-between text-sm">
                                                         <span class="text-gray-600">费用:</span>
-                                                        <span class="font-medium text-green-600">{{ calculateApiKeyCost(key.usage) }}</span>
+                                                        <span class="font-medium text-green-600">{{ getCurrentRangeUsage(key).formattedCost || '$0.000000' }}</span>
                                                     </div>
                                                     <!-- 并发限制 -->
                                                     <div class="flex justify-between text-sm">
@@ -664,13 +809,13 @@
                                                     </div>
                                                     <!-- 输入/输出Token -->
                                                     <div class="flex justify-between text-xs text-gray-500">
-                                                        <span>输入: {{ formatNumber((key.usage && key.usage.total && key.usage.total.inputTokens) || 0) }}</span>
-                                                        <span>输出: {{ formatNumber((key.usage && key.usage.total && key.usage.total.outputTokens) || 0) }}</span>
+                                                        <span>输入: {{ formatNumber(getCurrentRangeUsage(key).inputTokens) }}</span>
+                                                        <span>输出: {{ formatNumber(getCurrentRangeUsage(key).outputTokens) }}</span>
                                                     </div>
                                                     <!-- 缓存Token细节 -->
-                                                    <div v-if="((key.usage && key.usage.total && key.usage.total.cacheCreateTokens) || 0) > 0 || ((key.usage && key.usage.total && key.usage.total.cacheReadTokens) || 0) > 0" class="flex justify-between text-xs text-orange-500">
-                                                        <span>缓存创建: {{ formatNumber((key.usage && key.usage.total && key.usage.total.cacheCreateTokens) || 0) }}</span>
-                                                        <span>缓存读取: {{ formatNumber((key.usage && key.usage.total && key.usage.total.cacheReadTokens) || 0) }}</span>
+                                                    <div v-if="getCurrentRangeUsage(key).cacheCreateTokens > 0 || getCurrentRangeUsage(key).cacheReadTokens > 0" class="flex justify-between text-xs text-orange-500">
+                                                        <span>缓存创建: {{ formatNumber(getCurrentRangeUsage(key).cacheCreateTokens) }}</span>
+                                                        <span>缓存读取: {{ formatNumber(getCurrentRangeUsage(key).cacheReadTokens) }}</span>
                                                     </div>
                                                     <!-- RPM/TPM -->
                                                     <div class="flex justify-between text-xs text-blue-600">
@@ -900,6 +1045,9 @@
                                                                 </span>
                                                                 <span class="text-gray-600">
                                                                     总Token: <span class="font-semibold text-gray-800">{{ formatNumber(apiKeyModelStats[key.id].reduce((sum, stat) => sum + stat.allTokens, 0)) }}</span>
+                                                                </span>
+                                                                <span class="text-gray-600">
+                                                                    总费用: <span class="font-semibold text-indigo-600">{{ calculateTotalModelCost(apiKeyModelStats[key.id]) }}</span>
                                                                 </span>
                                                             </div>
                                                         </div>

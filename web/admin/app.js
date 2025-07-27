@@ -66,8 +66,40 @@ const app = createApp({
             
             // 价格数据
             costsData: {
-                todayCosts: { totalCost: 0, formatted: { totalCost: '$0.000000' } },
-                totalCosts: { totalCost: 0, formatted: { totalCost: '$0.000000' } }
+                todayCosts: { 
+                    inputCost: 0, 
+                    outputCost: 0, 
+                    cacheCreateCost: 0, 
+                    cacheReadCost: 0, 
+                    totalCost: 0,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    cacheCreateTokens: 0,
+                    cacheReadTokens: 0,
+                    formatted: { 
+                        inputCost: '$0.000000',
+                        outputCost: '$0.000000',
+                        cacheCost: '$0.000000',
+                        totalCost: '$0.000000' 
+                    } 
+                },
+                totalCosts: { 
+                    inputCost: 0, 
+                    outputCost: 0, 
+                    cacheCreateCost: 0, 
+                    cacheReadCost: 0, 
+                    totalCost: 0,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    cacheCreateTokens: 0,
+                    cacheReadTokens: 0,
+                    formatted: { 
+                        inputCost: '$0.000000',
+                        outputCost: '$0.000000',
+                        cacheCost: '$0.000000',
+                        totalCost: '$0.000000' 
+                    } 
+                }
             },
             
             // 仪表盘模型统计
@@ -111,7 +143,37 @@ const app = createApp({
             // API Keys
             apiKeys: [],
             apiKeysLoading: false,
-            apiKeyStatsTimeRange: 'all', // API Key统计时间范围：all, 7days, monthly
+            apiKeyStatsTimeRange: 'all', // API Key统计时间范围：all, 7days, monthly, custom
+            apiKeyCustomDateRange: [], // 自定义时间范围
+            apiKeyDateShortcuts: [
+                {
+                    text: '最近7天',
+                    value: (() => {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setDate(start.getDate() - 7);
+                        return [start, end];
+                    })()
+                },
+                {
+                    text: '最近30天',
+                    value: (() => {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setDate(start.getDate() - 30);
+                        return [start, end];
+                    })()
+                },
+                {
+                    text: '最近90天',
+                    value: (() => {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setDate(start.getDate() - 90);
+                        return [start, end];
+                    })()
+                }
+            ],
             showCreateApiKeyModal: false,
             createApiKeyLoading: false,
             apiKeyForm: {
@@ -286,7 +348,7 @@ const app = createApp({
                 autoCheckInterval: null,  // 自动检查定时器
                 noUpdateMessage: false  // 显示"已是最新版"提醒
             }
-        }
+        };
     },
     
     computed: {
@@ -1768,9 +1830,44 @@ const app = createApp({
                 
                 // 更新费用数据
                 if (todayCostsData.success && totalCostsData.success) {
+                    const todayData = todayCostsData.data.totalCosts || {};
+                    const totalData = totalCostsData.data.totalCosts || {};
+                    
                     this.costsData = {
-                        todayCosts: todayCostsData.data.totalCosts || { totalCost: 0, formatted: { totalCost: '$0.000000' } },
-                        totalCosts: totalCostsData.data.totalCosts || { totalCost: 0, formatted: { totalCost: '$0.000000' } }
+                        todayCosts: {
+                            inputCost: todayData.inputCost || 0,
+                            outputCost: todayData.outputCost || 0,
+                            cacheCreateCost: todayData.cacheCreateCost || 0,
+                            cacheReadCost: todayData.cacheReadCost || 0,
+                            totalCost: todayData.totalCost || 0,
+                            inputTokens: todayData.inputTokens || 0,
+                            outputTokens: todayData.outputTokens || 0,
+                            cacheCreateTokens: todayData.cacheCreateTokens || 0,
+                            cacheReadTokens: todayData.cacheReadTokens || 0,
+                            formatted: {
+                                inputCost: this.formatCost(todayData.inputCost || 0),
+                                outputCost: this.formatCost(todayData.outputCost || 0),
+                                cacheCost: this.formatCost((todayData.cacheCreateCost || 0) + (todayData.cacheReadCost || 0)),
+                                totalCost: this.formatCost(todayData.totalCost || 0)
+                            }
+                        },
+                        totalCosts: {
+                            inputCost: totalData.inputCost || 0,
+                            outputCost: totalData.outputCost || 0,
+                            cacheCreateCost: totalData.cacheCreateCost || 0,
+                            cacheReadCost: totalData.cacheReadCost || 0,
+                            totalCost: totalData.totalCost || 0,
+                            inputTokens: totalData.inputTokens || 0,
+                            outputTokens: totalData.outputTokens || 0,
+                            cacheCreateTokens: totalData.cacheCreateTokens || 0,
+                            cacheReadTokens: totalData.cacheReadTokens || 0,
+                            formatted: {
+                                inputCost: this.formatCost(totalData.inputCost || 0),
+                                outputCost: this.formatCost(totalData.outputCost || 0),
+                                cacheCost: this.formatCost((totalData.cacheCreateCost || 0) + (totalData.cacheReadCost || 0)),
+                                totalCost: this.formatCost(totalData.totalCost || 0)
+                            }
+                        }
                     };
                 }
             } catch (error) {
@@ -1782,7 +1879,15 @@ const app = createApp({
             this.apiKeysLoading = true;
             console.log('Loading API Keys with time range:', this.apiKeyStatsTimeRange);
             try {
-                const data = await this.apiRequest(`/admin/api-keys?timeRange=${this.apiKeyStatsTimeRange}`);
+                let url = `/admin/api-keys?timeRange=${this.apiKeyStatsTimeRange}`;
+                
+                // 如果是自定义时间范围，添加日期参数
+                if (this.apiKeyStatsTimeRange === 'custom' && this.apiKeyCustomDateRange && this.apiKeyCustomDateRange.length === 2) {
+                    url += `&startDate=${this.apiKeyCustomDateRange[0]}&endDate=${this.apiKeyCustomDateRange[1]}`;
+                }
+                
+                console.log('API request URL:', url);
+                const data = await this.apiRequest(url);
                 
                 if (!data) {
                     // 如果token过期，apiRequest会返回null并刷新页面
@@ -1875,6 +1980,66 @@ const app = createApp({
             }
         },
         
+        // 处理API Key时间范围变化
+        onApiKeyTimeRangeChange() {
+            console.log('API Key time range changed to:', this.apiKeyStatsTimeRange);
+            if (this.apiKeyStatsTimeRange !== 'custom') {
+                // 如果不是自定义时间范围，直接重新加载
+                this.apiKeyCustomDateRange = [];
+                this.loadApiKeys();
+            } else {
+                // 如果是自定义时间范围，需要等待用户选择日期
+                console.log('Waiting for custom date range selection...');
+            }
+        },
+        
+        // 处理自定义日期范围变化
+        onApiKeyCustomDateChange(dateRange) {
+            console.log('API Key custom date range changed:', dateRange);
+            if (dateRange && dateRange.length === 2) {
+                this.loadApiKeys();
+            }
+        },
+        
+        // 获取当前时间范围对应的使用数据
+        getCurrentRangeUsage(key) {
+            if (!key.usage) return { requests: 0, tokens: 0, inputTokens: 0, outputTokens: 0, cacheCreateTokens: 0, cacheReadTokens: 0, cost: 0, formattedCost: '$0.000000' };
+            
+            let usageData;
+            switch (this.apiKeyStatsTimeRange) {
+                case 'custom':
+                    usageData = key.usage.custom;
+                    break;
+                case '7days':
+                    usageData = key.usage['7days'];
+                    break;
+                case 'monthly':
+                    usageData = key.usage.monthly;
+                    break;
+                default:
+                    usageData = key.usage.total;
+            }
+            
+            return usageData || { requests: 0, tokens: 0, inputTokens: 0, outputTokens: 0, cacheCreateTokens: 0, cacheReadTokens: 0, cost: 0, formattedCost: '$0.000000' };
+        },
+        
+        // 获取当前时间范围的显示文本
+        getCurrentRangeDisplayText() {
+            switch (this.apiKeyStatsTimeRange) {
+                case 'custom':
+                    if (this.apiKeyCustomDateRange && this.apiKeyCustomDateRange.length === 2) {
+                        return `${this.apiKeyCustomDateRange[0]} 至 ${this.apiKeyCustomDateRange[1]}`;
+                    }
+                    return '自定义时间范围';
+                case '7days':
+                    return '最近7天';
+                case 'monthly':
+                    return '本月';
+                case 'all':
+                default:
+                    return '全部时间';
+            }
+        },
         
         async loadModelStats() {
             this.modelStatsLoading = true;
@@ -2509,7 +2674,7 @@ const app = createApp({
                 
                 if (this.trendGranularity === 'hour') {
                     // 小时粒度，传递开始和结束时间
-                    url += `granularity=hour`;
+                    url += 'granularity=hour';
                     if (this.dateFilter.customRange && this.dateFilter.customRange.length === 2) {
                         url += `&startDate=${encodeURIComponent(this.dateFilter.customRange[0])}`;
                         url += `&endDate=${encodeURIComponent(this.dateFilter.customRange[1])}`;
@@ -2552,7 +2717,7 @@ const app = createApp({
                 
                 if (this.trendGranularity === 'hour') {
                     // 小时粒度，传递开始和结束时间
-                    url += `granularity=hour`;
+                    url += 'granularity=hour';
                     if (this.dateFilter.customRange && this.dateFilter.customRange.length === 2) {
                         url += `&startDate=${encodeURIComponent(this.dateFilter.customRange[0])}`;
                         url += `&endDate=${encodeURIComponent(this.dateFilter.customRange[1])}`;
@@ -3132,6 +3297,43 @@ const app = createApp({
             const cacheReadCost = (cacheReadTokens / 1000000) * 0.30;
             
             const totalCost = inputCost + outputCost + cacheCreateCost + cacheReadCost;
+            
+            if (totalCost < 0.000001) return '$0.000000';
+            if (totalCost < 0.01) return '$' + totalCost.toFixed(6);
+            return '$' + totalCost.toFixed(4);
+        },
+
+        // 计算所有模型的总费用
+        calculateTotalModelCost(stats) {
+            if (!stats || !Array.isArray(stats) || stats.length === 0) {
+                return '$0.000000';
+            }
+            
+            let totalCost = 0;
+            
+            for (const stat of stats) {
+                // 优先使用后端返回的费用数据
+                if (stat.formatted && stat.formatted.total) {
+                    // 解析格式化的费用字符串（去掉 $ 符号）
+                    const costStr = stat.formatted.total.replace('$', '');
+                    const cost = parseFloat(costStr) || 0;
+                    totalCost += cost;
+                } else {
+                    // 如果没有后端费用数据，则计算估算费用
+                    const inputTokens = stat.inputTokens || 0;
+                    const outputTokens = stat.outputTokens || 0;
+                    const cacheCreateTokens = stat.cacheCreateTokens || 0;
+                    const cacheReadTokens = stat.cacheReadTokens || 0;
+                    
+                    // 使用通用估算价格（Claude 3.5 Sonnet价格作为默认）
+                    const inputCost = (inputTokens / 1000000) * 3.00;
+                    const outputCost = (outputTokens / 1000000) * 15.00;
+                    const cacheCreateCost = (cacheCreateTokens / 1000000) * 3.75;
+                    const cacheReadCost = (cacheReadTokens / 1000000) * 0.30;
+                    
+                    totalCost += inputCost + outputCost + cacheCreateCost + cacheReadCost;
+                }
+            }
             
             if (totalCost < 0.000001) return '$0.000000';
             if (totalCost < 0.01) return '$' + totalCost.toFixed(6);
@@ -3774,6 +3976,27 @@ const app = createApp({
             });
             
             this.showToast('已重置筛选条件并刷新数据', 'info', '重置成功');
+        },
+
+        // 格式化费用显示
+        formatCost(cost, decimals = 6) {
+            if (typeof cost !== 'number' || isNaN(cost)) {
+                return '$0.' + '0'.repeat(decimals);
+            }
+            return '$' + cost.toFixed(decimals);
+        },
+
+        // 计算今日费用占比
+        calculateTodayPercentage() {
+            const todayTotal = this.costsData.todayCosts.totalCost || 0;
+            const allTimeTotal = this.costsData.totalCosts.totalCost || 0;
+            
+            if (allTimeTotal === 0) {
+                return '0.00';
+            }
+            
+            const percentage = (todayTotal / allTimeTotal) * 100;
+            return percentage.toFixed(2);
         }
     }
 });

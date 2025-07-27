@@ -20,14 +20,43 @@ const router = express.Router();
 // 获取所有API Keys
 router.get('/api-keys', authenticateAdmin, async (req, res) => {
   try {
-    const { timeRange = 'all' } = req.query; // all, 7days, monthly
+    const { timeRange = 'all', startDate, endDate } = req.query; // 添加startDate和endDate参数
     const apiKeys = await apiKeyService.getAllApiKeys();
     
     // 根据时间范围计算查询模式
     const now = new Date();
     let searchPatterns = [];
     
-    if (timeRange === '7days') {
+    if (timeRange === 'custom' && startDate && endDate) {
+      // 自定义时间范围
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // 验证日期范围
+      if (start > end) {
+        return res.status(400).json({ 
+          error: 'Invalid date range', 
+          message: 'Start date must be before or equal to end date' 
+        });
+      }
+      
+      // 限制最大范围为90天（相比model-stats的31天更宽松）
+      const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      if (daysDiff > 90) {
+        return res.status(400).json({ 
+          error: 'Date range too large', 
+          message: 'Date range cannot exceed 90 days' 
+        });
+      }
+      
+      // 生成日期范围内所有日期的搜索模式
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        searchPatterns.push(`usage:daily:*:${dateStr}`);
+      }
+      
+      logger.info(`📊 Custom date range for API keys: ${daysDiff} days from ${startDate} to ${endDate}`);
+    } else if (timeRange === '7days') {
       // 最近7天
       for (let i = 0; i < 7; i++) {
         const date = new Date(now);
@@ -112,7 +141,7 @@ router.get('/api-keys', authenticateAdmin, async (req, res) => {
           apiKey.usage.total.formattedCost = CostCalculator.formatCost(totalCost);
         }
       } else {
-        // 7天或本月：重新计算统计数据
+        // 7天、本月或自定义时间范围：重新计算统计数据
         const tempUsage = {
           requests: 0,
           tokens: 0,
@@ -144,9 +173,24 @@ router.get('/api-keys', authenticateAdmin, async (req, res) => {
         
         // 计算指定时间范围的费用
         let totalCost = 0;
-        const modelKeys = timeRange === '7days' 
-          ? await client.keys(`usage:${apiKey.id}:model:daily:*:*`)
-          : await client.keys(`usage:${apiKey.id}:model:monthly:*:${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+        let modelKeys = [];
+        
+        if (timeRange === 'custom') {
+          // 自定义时间范围：搜索指定日期范围内的所有模型数据
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const dailyKeys = await client.keys(`usage:${apiKey.id}:model:daily:*:${dateStr}`);
+            modelKeys.push(...dailyKeys);
+          }
+        } else if (timeRange === '7days') {
+          modelKeys = await client.keys(`usage:${apiKey.id}:model:daily:*:*`);
+        } else {
+          // monthly
+          modelKeys = await client.keys(`usage:${apiKey.id}:model:monthly:*:${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+        }
         
         const modelStatsMap = new Map();
         
@@ -161,6 +205,7 @@ router.get('/api-keys', authenticateAdmin, async (req, res) => {
               if (daysDiff > 6) continue;
             }
           }
+          // 对于自定义时间范围，我们已经在上面按日期筛选了keys，所以这里不需要额外过滤
           
           const modelMatch = key.match(/usage:.+:model:(?:daily|monthly):(.+):\d{4}-\d{2}(?:-\d{2})?$/);
           if (!modelMatch) continue;
@@ -215,21 +260,31 @@ router.get('/api-keys', authenticateAdmin, async (req, res) => {
         // 使用从Redis读取的allTokens，如果没有则计算
         const allTokens = tempUsage.allTokens || (tempUsage.inputTokens + tempUsage.outputTokens + tempUsage.cacheCreateTokens + tempUsage.cacheReadTokens);
         
+        // 确定统计键名
+        const statKey = timeRange === 'custom' ? 'custom' : timeRange;
+        
         // 更新API Key的usage数据为指定时间范围的数据
-        apiKey.usage[timeRange] = {
+        apiKey.usage[statKey] = {
           ...tempUsage,
-          tokens: allTokens, // 使用包含所有Token的总数
           allTokens: allTokens,
           cost: totalCost,
           formattedCost: CostCalculator.formatCost(totalCost)
         };
         
         // 为了保持兼容性，也更新total字段
-        apiKey.usage.total = apiKey.usage[timeRange];
+        if (timeRange !== 'custom') {
+          apiKey.usage.total = apiKey.usage[statKey];
+        }
       }
     }
-    
-    res.json({ success: true, data: apiKeys });
+
+    res.json({ 
+      success: true, 
+      data: apiKeys,
+      timeRange: timeRange,
+      // 添加时间范围信息到响应中，方便前端使用
+      ...(timeRange === 'custom' && { startDate, endDate })
+    });
   } catch (error) {
     logger.error('❌ Failed to get API keys:', error);
     res.status(500).json({ error: 'Failed to get API keys', message: error.message });
