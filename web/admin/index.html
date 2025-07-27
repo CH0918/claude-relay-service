@@ -664,6 +664,24 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
+                                <!-- 名称搜索 -->
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        v-model="apiKeySearchQuery" 
+                                        placeholder="搜索API Key名称..."
+                                        class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-64"
+                                    >
+                                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    <button 
+                                        v-if="apiKeySearchQuery" 
+                                        @click="apiKeySearchQuery = ''"
+                                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                
                                 <!-- Token统计时间范围选择 -->
                                 <div class="flex items-center gap-2">
                                     <select 
@@ -678,7 +696,7 @@
                                     </select>
                                     
                                     <!-- 自定义时间范围选择器 -->
-                                    <div v-if="apiKeyStatsTimeRange === 'custom'" class="flex items-center gap-2">
+                                    <div v-if="apiKeyStatsTimeRange === 'custom'" class="flex items-center gap-2 h-[36px]">
                                         <el-date-picker
                                             v-model="apiKeyCustomDateRange"
                                             type="daterange"
@@ -688,9 +706,10 @@
                                             size="small"
                                             format="YYYY-MM-DD"
                                             value-format="YYYY-MM-DD"
+																					  
                                             :shortcuts="apiKeyDateShortcuts"
                                             @change="onApiKeyCustomDateChange"
-                                            style="width: 260px;"
+                                            style="width: 260px; height: 36px;"
                                         />
                                     </div>
                                 </div>
@@ -1093,7 +1112,25 @@
                                 <h3 class="text-xl font-bold text-gray-900 mb-2">账户管理</h3>
                                 <p class="text-gray-600">管理您的 Claude 和 Gemini 账户及代理配置</p>
                             </div>
-                            <div class="flex gap-2">
+                            <div class="flex items-center gap-2">
+                                <!-- 账户名称搜索 -->
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        v-model="accountSearchQuery" 
+                                        placeholder="搜索账户名称..."
+                                        class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-48"
+                                    >
+                                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    <button 
+                                        v-if="accountSearchQuery" 
+                                        @click="accountSearchQuery = ''"
+                                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                
                                 <select v-model="accountSortBy" @change="sortAccounts()" class="form-input px-3 py-2 text-sm">
                                     <option value="name">按名称排序</option>
                                     <option value="dailyTokens">按今日Token排序</option>

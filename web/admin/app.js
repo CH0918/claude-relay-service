@@ -176,6 +176,7 @@ const app = createApp({
             ],
 						apiKeysSortBy: '', // 当前排序字段
             apiKeysSortOrder: 'asc', // 排序顺序 'asc' 或 'desc'
+            apiKeySearchQuery: '', // API Key 名称搜索查询
             showCreateApiKeyModal: false,
             createApiKeyLoading: false,
             apiKeyForm: {
@@ -265,6 +266,7 @@ const app = createApp({
             accountsLoading: false,
             accountSortBy: 'dailyTokens', // 默认按今日Token排序
             accountsSortOrder: 'asc', // 排序顺序 'asc' 或 'desc'
+            accountSearchQuery: '', // 账户名称搜索查询
             showCreateAccountModal: false,
             createAccountLoading: false,
             accountForm: {
@@ -370,11 +372,21 @@ const app = createApp({
         
         // 排序后的账户列表
         sortedAccounts() {
-            if (!this.accountsSortBy) {
-                return this.accounts;
+            // 先进行搜索过滤
+            let filteredAccounts = this.accounts;
+            if (this.accountSearchQuery && this.accountSearchQuery.trim()) {
+                const query = this.accountSearchQuery.toLowerCase().trim();
+                filteredAccounts = this.accounts.filter(account => {
+                    return account.name && account.name.toLowerCase().includes(query);
+                });
             }
             
-            return [...this.accounts].sort((a, b) => {
+            // 如果没有排序字段，直接返回过滤后的结果
+            if (!this.accountsSortBy) {
+                return filteredAccounts;
+            }
+            
+            return [...filteredAccounts].sort((a, b) => {
                 let aValue = a[this.accountsSortBy];
                 let bValue = b[this.accountsSortBy];
                 
@@ -401,11 +413,21 @@ const app = createApp({
         
         // 排序后的API Keys列表
         sortedApiKeys() {
-            if (!this.apiKeysSortBy) {
-                return this.apiKeys;
+            // 先进行搜索过滤
+            let filteredApiKeys = this.apiKeys;
+            if (this.apiKeySearchQuery && this.apiKeySearchQuery.trim()) {
+                const query = this.apiKeySearchQuery.toLowerCase().trim();
+                filteredApiKeys = this.apiKeys.filter(key => {
+                    return key.name && key.name.toLowerCase().includes(query);
+                });
             }
             
-            return [...this.apiKeys].sort((a, b) => {
+            // 如果没有排序字段，直接返回过滤后的结果
+            if (!this.apiKeysSortBy) {
+                return filteredApiKeys;
+            }
+            
+            return [...filteredApiKeys].sort((a, b) => {
                 let aValue, bValue;
                 
                 // 特殊处理不同字段
